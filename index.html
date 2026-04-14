@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>디안 스티커 프린터</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans KR',sans-serif; background:#f0f0f0; }
+
+  .app { max-width:1000px; margin:0 auto; padding:20px; }
+  h1 { font-size:20px; margin-bottom:15px; }
+  .input-area { background:#fff; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+  .input-area h2 { font-size:15px; margin-bottom:10px; color:#333; }
+  textarea { width:100%; height:200px; font-size:13px; font-family:monospace; padding:10px; border:1px solid #ddd; border-radius:4px; resize:vertical; }
+  .btn-row { margin-top:10px; display:flex; gap:10px; }
+  button { padding:10px 20px; font-size:14px; font-weight:700; border:none; border-radius:6px; cursor:pointer; }
+  .btn-parse { background:#333; color:#fff; }
+  .btn-parse:hover { background:#111; }
+  .btn-print-one { background:#d32f2f; color:#fff; font-size:12px; padding:6px 14px; }
+  .btn-print-one:hover { background:#b71c1c; }
+  .btn-print-all { background:#1565c0; color:#fff; }
+  .btn-print-all:hover { background:#0d47a1; }
+
+  .preview { display:flex; flex-wrap:wrap; gap:15px; margin-top:15px; }
+  .sticker-wrap { background:#fff; padding:10px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.15); }
+  .sticker-wrap .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+  .sticker-wrap .label { font-size:11px; color:#999; }
+
+  /* 스티커 100x100mm */
+  .sticker {
+    width:100mm; height:100mm;
+    border:1px dashed #ccc;
+    padding:6mm;
+    display:flex; flex-direction:column; justify-content:center;
+    overflow:hidden;
+  }
+
+  /* 원단 스티커 - 글씨 크게 */
+  .sticker.fabric .fabric-name { font-size:36pt; font-weight:900; line-height:1.15; }
+  .sticker.fabric .fabric-detail { font-size:30pt; font-weight:900; line-height:1.15; margin-top:3mm; }
+  .sticker.fabric .fabric-site { font-size:16pt; font-weight:700; margin-top:3mm; color:#555; }
+
+  /* 배송 스티커 - 균등 분배 */
+  .sticker.delivery { font-weight:900; padding:4mm; display:flex; flex-direction:column; justify-content:space-between; height:100mm; }
+  .sticker.delivery .d-header { display:flex; justify-content:space-between; font-size:22pt; }
+  .sticker.delivery .d-hr { border:none; border-top:2px solid #000; margin:0; }
+  .sticker.delivery .d-row { font-size:18pt; line-height:1.3; word-break:keep-all; }
+  .sticker.delivery .d-sender { font-size:18pt; color:#d32f2f; }
+  .sticker.delivery .d-section { flex:1; display:flex; flex-direction:column; justify-content:center; }
+
+  /* 개별 인쇄용 숨김 영역 */
+  #printArea { display:none; }
+
+  @media print {
+    body { background:#fff; margin:0; padding:0; }
+    .app { display:none !important; }
+    #printArea { display:block !important; margin:0; padding:0; }
+    #printArea .sticker { border:none; width:100mm; height:100mm; padding:6mm; margin:0; page-break-after:always; }
+    html, body { width:100mm; height:100mm; }
+    @page { size:100mm 100mm; margin:0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>디안 스티커 프린터</h1>
+
+  <div class="input-area">
+    <h2>배송 리스트 붙여넣기</h2>
+    <textarea id="input" placeholder="주문 리스트를 여기에 붙여넣으세요..."></textarea>
+    <div class="btn-row">
+      <button class="btn-parse" onclick="parseInput()">스티커 생성</button>
+      <button class="btn-print-all" onclick="printAll()">전체 인쇄</button>
+    </div>
+  </div>
+
+  <div class="preview" id="preview"></div>
+</div>
+
+<!-- 인쇄 전용 영역 (화면에 안 보임, 인쇄할 때만 표시) -->
+<div id="printArea"></div>
+
+<script>
+let allStickers = [];
+
+function parseInput() {
+  const raw = document.getElementById('input').value.trim();
+  if (!raw) return alert('데이터를 입력해주세요');
+
+  const lines = raw.split('\n').filter(l => l.trim());
+  allStickers = [];
+  let prev = {};
+
+  for (const line of lines) {
+    const cols = line.split('\t');
+    if (cols.length < 6) continue;
+
+    const resolve = (val, key) => {
+      const v = (val||'').trim();
+      if (v === '"' || v === '\u201C' || v === '\u201D') return prev[key] || '';
+      return v;
+    };
+
+    const orderCompany = resolve(cols[0], 'orderCompany');
+    const fabricName = resolve(cols[1], 'fabricName');
+    const colorNo = resolve(cols[2], 'colorNo');
+    const qtyRaw = resolve(cols[3], 'qty');
+    const subCompany = (cols[4] || '').trim();
+    const transport = resolve(cols[5], 'transport');
+    const payment = resolve(cols[6] || '', 'payment');
+    const address = resolve(cols[7] || '', 'address');
+    const receiver = resolve(cols[8] || '', 'receiver');
+    const phone = resolve(cols[9] || '', 'phone');
+    const bigo = (cols[10] || '').trim();
+
+    prev = { orderCompany, fabricName, colorNo, qty: qtyRaw, transport, payment, address, receiver, phone };
+
+    const qty = qtyRaw.replace(/'/g, '');
+
+    // 원단 스티커
+    if (fabricName && qty) {
+      const siteMatch = bigo.match(/현장\s*(.+?)(?:\s|$)/);
+      allStickers.push({
+        type: 'fabric',
+        name: fabricName,
+        detail: (colorNo ? '#' + colorNo.replace(/^#/, '') + ' ' : '') + qty + 'Y',
+        site: siteMatch ? siteMatch[1] : ''
+      });
+    }
+
+    // 배송 스티커: 대신택배 또는 퀵 (앞에 다른 업체명 없을 때)
+    const isDaesin = transport.includes('대신');
+    const isQuick = transport.includes('퀵');
+    const hasSubCompany = subCompany && subCompany !== '' && subCompany !== ' ';
+
+    if ((isDaesin || isQuick) && !hasSubCompany && address) {
+      const transportName = isDaesin ? '대신택배' : '퀵';
+      const pay = payment.includes('현불') ? '현불' : '착불';
+      let sender = '';
+      const sm = bigo.match(/발신[:\s]*(.+?)(?:\s|$)/);
+      if (sm) sender = sm[1];
+
+      allStickers.push({
+        type: 'delivery',
+        transportName: transportName,
+        pay: pay,
+        address: address,
+        receiver: receiver,
+        phone: phone,
+        sender: sender
+      });
+    }
+
+    // 일신 → 한주섬유: 가공 원단 스티커 (배송스티커 불필요, 원단+가공종류)
+    const isIlsin = transport.includes('일신');
+    const isHanju = receiver.includes('한주');
+    if (isIlsin && isHanju && fabricName) {
+      const bigoFirst = bigo.split('/')[0].trim();
+      let processType = '';
+      if (bigoFirst && !bigoFirst.includes('화급') && !bigoFirst.includes('입금')) {
+        processType = bigoFirst;
+      }
+      // 마지막 원단 스티커에 가공 정보 추가
+      const lastIdx = allStickers.length - 1;
+      if (lastIdx >= 0 && allStickers[lastIdx].type === 'fabric') {
+        allStickers[lastIdx].process = processType ? processType + '가공' : '';
+      }
+    }
+  }
+
+  renderStickers();
+}
+
+function buildStickerHTML(s) {
+  if (s.type === 'fabric') {
+    return `<div class="sticker fabric">
+      <div class="fabric-name">${s.name}</div>
+      <div class="fabric-detail">${s.detail}</div>
+      ${s.process ? '<div class="fabric-detail" style="color:#d32f2f;">' + s.process + '</div>' : ''}
+      ${s.site ? '<div class="fabric-site">' + s.site + '</div>' : ''}
+    </div>`;
+  } else {
+    // 주소 줄바꿈
+    const addr = s.address;
+    let addrHTML = '';
+    if (addr.length > 18) {
+      const mid = addr.lastIndexOf(' ', Math.floor(addr.length * 0.55));
+      if (mid > 5) {
+        addrHTML = `<div class="d-row">${addr.substring(0, mid)}</div><div class="d-row">${addr.substring(mid + 1)}</div>`;
+      } else {
+        addrHTML = `<div class="d-row">${addr}</div>`;
+      }
+    } else {
+      addrHTML = `<div class="d-row">${addr}</div>`;
+    }
+
+    const senderBlock = s.sender
+      ? '<hr class="d-hr"><div class="d-section"><div class="d-sender">발신 ' + s.sender + '</div></div>'
+      : '';
+
+    return `<div class="sticker delivery">
+      <div class="d-header"><span>${s.transportName}</span><span>${s.pay}</span></div>
+      <hr class="d-hr">
+      <div class="d-section">${addrHTML}</div>
+      <hr class="d-hr">
+      <div class="d-section">
+        <div class="d-row">${s.receiver}</div>
+        <div class="d-row">${s.phone}</div>
+      </div>
+      ${senderBlock}
+    </div>`;
+  }
+}
+
+function renderStickers() {
+  const container = document.getElementById('preview');
+  container.innerHTML = '';
+
+  if (allStickers.length === 0) {
+    container.innerHTML = '<p style="color:#999">생성된 스티커가 없습니다.</p>';
+    return;
+  }
+
+  allStickers.forEach((s, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'sticker-wrap';
+    const typeLabel = s.type === 'fabric' ? '원단' : '배송';
+    wrap.innerHTML = `
+      <div class="top-bar">
+        <span class="label">${typeLabel} 스티커 #${i + 1}</span>
+        <button class="btn-print-one" onclick="printOne(${i})">인쇄</button>
+      </div>
+      ${buildStickerHTML(s)}`;
+    container.appendChild(wrap);
+  });
+}
+
+// 개별 스티커 1장 인쇄
+function printOne(index) {
+  const s = allStickers[index];
+  document.getElementById('printArea').innerHTML = buildStickerHTML(s);
+  window.print();
+}
+
+// 전체 인쇄 (각 스티커 1장씩)
+function printAll() {
+  if (allStickers.length === 0) return alert('스티커를 먼저 생성해주세요');
+  const html = allStickers.map(s => buildStickerHTML(s)).join('');
+  document.getElementById('printArea').innerHTML = html;
+  window.print();
+}
+</script>
+</body>
+</html>
