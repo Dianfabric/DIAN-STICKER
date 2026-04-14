@@ -198,15 +198,21 @@ function parseInput() {
       const sm = bigo.match(/발신[:\s]*(.+?)(?:\s|$)/);
       if (sm) sender = sm[1];
 
-      allStickers.push({
-        type: 'delivery',
-        transportName: transportName,
-        pay: pay,
-        address: address,
-        receiver: receiver,
-        phone: phone,
-        sender: sender
-      });
+      // 같은 주소+수신자 배송 스티커 중복 방지
+      const addrKey = address + '|' + receiver;
+      const alreadyExists = allStickers.some(s => s.type === 'delivery' && (s.address + '|' + s.receiver) === addrKey);
+
+      if (!alreadyExists) {
+        allStickers.push({
+          type: 'delivery',
+          transportName: transportName,
+          pay: pay,
+          address: address,
+          receiver: receiver,
+          phone: phone,
+          sender: sender
+        });
+      }
     }
 
     // 일신 → 한주섬유: 가공 원단 스티커 (배송스티커 불필요, 원단+가공종류)
