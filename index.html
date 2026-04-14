@@ -130,50 +130,50 @@ function parseInput() {
     // 원단 스티커
     if (fabricName && qty) {
       // 현장명 추출 우선순위:
-      // 1. "XXX 기재" → 기재 앞 내용이 현장명
-      // 2. (괄호 안) 발신 뒤 → "발신:인휴 (GS자이 84A 거실쿠션)"
-      // 3. / 뒤 텍스트 → "발신: 디자인품 / 에코_갤러리아"
-      // 4. "현장 XXX"
+      // 1. "현장명: XXX" 또는 "현장명:XXX"
+      // 2. "XXX 기재" (,뒤)
+      // 3. 발신 뒤 (괄호 안)
+      // 4. / 뒤 텍스트
+      // 5. "현장 XXX"
       let siteName = '';
 
-      // 1. "기재" 패턴 우선 체크
-      const gijaeMatch = bigo.match(/[,]\s*(.+?)\s*기재/);
-      if (gijaeMatch) {
-        siteName = gijaeMatch[1].trim();
+      // 1. "현장명:" 패턴
+      const siteNameMatch = bigo.match(/현장명[:\s]+(.+?)(?:\s*\/|\s*$)/);
+      if (siteNameMatch) {
+        siteName = siteNameMatch[1].trim();
       }
 
-      // 2. 발신 뒤 괄호 안 (팩스, 발주 등은 제외)
+      // 2. "기재" 패턴
       if (!siteName) {
-        const parenAfterSender = bigo.match(/발신[:\s]*\S+\s*\(([^)]+)\)/);
-        if (parenAfterSender && !parenAfterSender[1].includes('팩스') && !parenAfterSender[1].includes('발주') && !parenAfterSender[1].includes('팀장') && !parenAfterSender[1].includes('대표') && !parenAfterSender[1].includes('사장')) {
-          siteName = parenAfterSender[1];
+        const gijaeMatch = bigo.match(/[,]\s*(.+?)\s*기재/);
+        if (gijaeMatch) {
+          siteName = gijaeMatch[1].trim();
         }
       }
 
-      // 3. 독립 괄호 (사람 이름이 아닌 경우)
+      // 3. 발신 뒤 괄호 안
       if (!siteName) {
-        const allParens = bigo.match(/\(([^)]+)\)/g);
-        if (allParens) {
-          for (const p of allParens) {
-            const inner = p.slice(1, -1);
-            if (!inner.includes('팀장') && !inner.includes('대표') && !inner.includes('사장') && !inner.includes('과장') && !inner.includes('부장') && !inner.includes('실장') && !inner.includes('발주') && !inner.includes('팩스')) {
-              siteName = inner;
-              break;
-            }
+        const parenAfterSender = bigo.match(/발신[:\s]*\S+\s*\(([^)]+)\)/);
+        if (parenAfterSender) {
+          const inner = parenAfterSender[1];
+          if (!inner.includes('팩스') && !inner.includes('발주') && !inner.includes('팀장') && !inner.includes('대표') && !inner.includes('사장') && !inner.includes('과장') && !inner.includes('부장')) {
+            siteName = inner;
           }
         }
       }
 
-      // 4. / 뒤 텍스트
+      // 4. / 뒤 텍스트 (발신 다음)
       if (!siteName) {
         const slashMatch = bigo.match(/발신[:\s]*\S+\s*\/\s*(.+?)(?:\s*기재|\s*$)/);
         if (slashMatch) siteName = slashMatch[1].trim();
       }
 
-      // 5. "현장 XXX"
+      // 5. "현장 XXX" (현장명: 과 구분)
       if (!siteName) {
-        const siteMatch = bigo.match(/현장\s*(.+?)(?:\s|$)/);
-        if (siteMatch) siteName = siteMatch[1];
+        const siteMatch = bigo.match(/현장\s+(.+?)(?:\s*\/|\s*$)/);
+        if (siteMatch && !siteMatch[0].includes('현장명')) {
+          siteName = siteMatch[1].trim();
+        }
       }
 
       allStickers.push({
