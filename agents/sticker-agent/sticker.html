@@ -48,6 +48,10 @@
   .sticker.delivery .d-hr { border:none; border-top:2px solid #000; margin:0; }
   .sticker.delivery .d-row { font-size:18pt; line-height:1.3; word-break:keep-all; }
   .sticker.delivery .d-sender { font-size:18pt; color:#d32f2f; }
+
+  /* 편집 가능 영역 */
+  [contenteditable]:hover { outline:2px dashed #bbb; outline-offset:2px; cursor:text; }
+  [contenteditable]:focus { outline:2px solid #1565c0; outline-offset:2px; color:#000 !important; }
   .sticker.delivery .d-section { flex:1; display:flex; flex-direction:column; justify-content:center; }
 
   /* 개별 인쇄용 숨김 영역 */
@@ -219,13 +223,14 @@ function parseInput() {
   renderStickers();
 }
 
-function buildStickerHTML(s) {
+function buildStickerHTML(s, editable) {
+  const ce = editable ? ' contenteditable="true"' : '';
   if (s.type === 'fabric') {
     return `<div class="sticker fabric">
-      <div class="fabric-name">${s.name}</div>
-      <div class="fabric-detail">${s.detail}</div>
-      ${s.process ? '<div class="fabric-detail" style="color:#d32f2f;">' + s.process + '</div>' : ''}
-      ${s.site ? '<div class="fabric-site">' + s.site + '</div>' : ''}
+      <div class="fabric-name"${ce}>${s.name}</div>
+      <div class="fabric-detail"${ce}>${s.detail}</div>
+      ${s.process ? '<div class="fabric-detail"' + ce + ' style="color:#d32f2f;">' + s.process + '</div>' : ''}
+      ${s.site ? '<div class="fabric-site"' + ce + '>' + s.site + '</div>' : (editable ? '<div class="fabric-site"' + ce + ' style="color:#ccc;">현장명 입력</div>' : '')}
     </div>`;
   } else {
     // 주소 줄바꿈
@@ -234,26 +239,26 @@ function buildStickerHTML(s) {
     if (addr.length > 18) {
       const mid = addr.lastIndexOf(' ', Math.floor(addr.length * 0.55));
       if (mid > 5) {
-        addrHTML = `<div class="d-row">${addr.substring(0, mid)}</div><div class="d-row">${addr.substring(mid + 1)}</div>`;
+        addrHTML = `<div class="d-row"${ce}>${addr.substring(0, mid)}</div><div class="d-row"${ce}>${addr.substring(mid + 1)}</div>`;
       } else {
-        addrHTML = `<div class="d-row">${addr}</div>`;
+        addrHTML = `<div class="d-row"${ce}>${addr}</div>`;
       }
     } else {
-      addrHTML = `<div class="d-row">${addr}</div>`;
+      addrHTML = `<div class="d-row"${ce}>${addr}</div>`;
     }
 
     const senderBlock = s.sender
-      ? '<hr class="d-hr"><div class="d-section"><div class="d-sender">발신 ' + s.sender + '</div></div>'
+      ? '<hr class="d-hr"><div class="d-section"><div class="d-sender"' + ce + '>발신 ' + s.sender + '</div></div>'
       : '';
 
     return `<div class="sticker delivery">
-      <div class="d-header"><span>${s.transportName}</span><span>${s.pay}</span></div>
+      <div class="d-header"><span${ce}>${s.transportName}</span><span${ce}>${s.pay}</span></div>
       <hr class="d-hr">
       <div class="d-section">${addrHTML}</div>
       <hr class="d-hr">
       <div class="d-section">
-        <div class="d-row">${s.receiver}</div>
-        <div class="d-row">${s.phone}</div>
+        <div class="d-row"${ce}>${s.receiver}</div>
+        <div class="d-row"${ce}>${s.phone}</div>
       </div>
       ${senderBlock}
     </div>`;
@@ -272,28 +277,43 @@ function renderStickers() {
   allStickers.forEach((s, i) => {
     const wrap = document.createElement('div');
     wrap.className = 'sticker-wrap';
+    wrap.id = 'sticker-' + i;
     const typeLabel = s.type === 'fabric' ? '원단' : '배송';
     wrap.innerHTML = `
       <div class="top-bar">
-        <span class="label">${typeLabel} 스티커 #${i + 1}</span>
+        <span class="label">${typeLabel} 스티커 #${i + 1} <span style="color:#aaa;font-size:10px;">클릭하여 편집</span></span>
         <button class="btn-print-one" onclick="printOne(${i})">인쇄</button>
       </div>
-      ${buildStickerHTML(s)}`;
+      ${buildStickerHTML(s, true)}`;
     container.appendChild(wrap);
   });
 }
 
-// 개별 스티커 1장 인쇄
+// 개별 스티커 1장 인쇄 (편집된 내용 그대로)
 function printOne(index) {
-  const s = allStickers[index];
-  document.getElementById('printArea').innerHTML = buildStickerHTML(s);
+  const wrap = document.getElementById('sticker-' + index);
+  const sticker = wrap.querySelector('.sticker');
+  // contenteditable 제거한 복사본으로 인쇄
+  const clone = sticker.cloneNode(true);
+  clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+  // placeholder 제거
+  clone.querySelectorAll('.fabric-site').forEach(el => { if (el.style.color === 'rgb(204, 204, 204)') el.remove(); });
+  document.getElementById('printArea').innerHTML = clone.outerHTML;
   window.print();
 }
 
-// 전체 인쇄 (각 스티커 1장씩)
+// 전체 인쇄
 function printAll() {
   if (allStickers.length === 0) return alert('스티커를 먼저 생성해주세요');
-  const html = allStickers.map(s => buildStickerHTML(s)).join('');
+  let html = '';
+  allStickers.forEach((s, i) => {
+    const wrap = document.getElementById('sticker-' + i);
+    const sticker = wrap.querySelector('.sticker');
+    const clone = sticker.cloneNode(true);
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    clone.querySelectorAll('.fabric-site').forEach(el => { if (el.style.color === 'rgb(204, 204, 204)') el.remove(); });
+    html += clone.outerHTML;
+  });
   document.getElementById('printArea').innerHTML = html;
   window.print();
 }
