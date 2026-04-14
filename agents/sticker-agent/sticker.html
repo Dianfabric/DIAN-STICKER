@@ -121,10 +121,19 @@ function parseInput() {
 
     // 원단 스티커
     if (fabricName && qty) {
-      // 현장명 추출: (괄호 안) 또는 "현장 XXX"
+      // 현장명 추출:
+      // 1. (괄호 안) → "발신:인휴 (GS자이/검단 84A 거실쿠션)"
+      // 2. / 뒤 텍스트 → "발신: 디자인품 / 에코_갤러리아 센터시티점 기재"
+      // 3. "현장 XXX"
       let siteName = '';
       const parenMatch = bigo.match(/\(([^)]+)\)/);
-      if (parenMatch) siteName = parenMatch[1];
+      if (parenMatch) {
+        siteName = parenMatch[1];
+      } else {
+        // / 뒤에서 추출 (발신 다음의 /)
+        const slashMatch = bigo.match(/발신[:\s]*\S+\s*\/\s*(.+?)(?:\s*기재|\s*$)/);
+        if (slashMatch) siteName = slashMatch[1].trim();
+      }
       if (!siteName) {
         const siteMatch = bigo.match(/현장\s*(.+?)(?:\s|$)/);
         if (siteMatch) siteName = siteMatch[1];
