@@ -149,6 +149,9 @@ function parseInput() {
       // 5. "현장 XXX"
       let siteName = '';
 
+      // 비고에서 발신 부분 제거한 텍스트로 현장명 추출
+      const bigoNoSender = bigo.replace(/발신[:\s]*\S+/g, '').trim();
+
       // 1. [대괄호 안] → "발신:리노위즈 [군포 트리아츠]"
       const bracketMatch = bigo.match(/\[([^\]]+)\]/);
       if (bracketMatch) {
@@ -167,7 +170,7 @@ function parseInput() {
         if (gijaeMatch) siteName = gijaeMatch[1].trim();
       }
 
-      // 4. 발신 뒤 괄호 안 (사람 제외)
+      // 4. 발신 뒤 (괄호 안) — 장소만, 사람/팩스/발주 제외
       if (!siteName) {
         const parenAfterSender = bigo.match(/발신[:\s]*\S+\s*\(([^)]+)\)/);
         if (parenAfterSender) {
@@ -178,16 +181,24 @@ function parseInput() {
         }
       }
 
-      // 5. / 뒤 텍스트 (발신 다음)
+      // 5. / 뒤 텍스트 (발신 제외한 부분에서)
       if (!siteName) {
-        const slashMatch = bigo.match(/발신[:\s]*\S+\s*\/\s*(.+?)(?:\s*기재|\s*$)/);
-        if (slashMatch) siteName = slashMatch[1].trim();
+        const slashMatch = bigoNoSender.match(/\/\s*(.+?)(?:\s*기재|\s*$)/);
+        if (slashMatch) {
+          const val = slashMatch[1].trim();
+          if (val && !val.includes('발신')) siteName = val;
+        }
       }
 
-      // 6. "현장 XXX" (현장명: 과 구분)
+      // 6. "현장 XXX"
       if (!siteName) {
-        const siteMatch = bigo.match(/현장\s+(.+?)(?:\s*\/|\s*$)/);
+        const siteMatch = bigoNoSender.match(/현장\s+(.+?)(?:\s*\/|\s*$)/);
         if (siteMatch && !siteMatch[0].includes('현장명')) siteName = siteMatch[1].trim();
+      }
+
+      // 현장명에서 "발신" 관련 텍스트 최종 정리
+      if (siteName) {
+        siteName = siteName.replace(/발신[:\s]*\S*/g, '').trim();
       }
 
       allStickers.push({
