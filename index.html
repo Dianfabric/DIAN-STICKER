@@ -44,9 +44,12 @@
   }
 
   /* 원단 스티커 - 글씨 크게 */
+  .sticker.fabric { justify-content:space-between; }
+  .sticker.fabric .fabric-top { }
   .sticker.fabric .fabric-name { font-size:36pt; font-weight:900; line-height:1.15; }
   .sticker.fabric .fabric-detail { font-size:30pt; font-weight:900; line-height:1.15; margin-top:3mm; }
   .sticker.fabric .fabric-site { font-size:16pt; font-weight:700; margin-top:3mm; color:#555; }
+  .sticker.fabric .fabric-bottom { border-top:2px solid #000; padding-top:2mm; font-size:10pt; color:#555; text-align:center; }
 
   /* 배송 스티커 - 균등 분배 */
   .sticker.delivery { font-weight:900; padding:4mm; display:flex; flex-direction:column; justify-content:space-between; height:100mm; }
@@ -242,10 +245,13 @@ function buildStickerHTML(s, editable) {
   const ce = editable ? ' contenteditable="true"' : '';
   if (s.type === 'fabric') {
     return `<div class="sticker fabric">
-      <div class="fabric-name"${ce}>${s.name}</div>
-      <div class="fabric-detail"${ce}>${s.detail}</div>
-      ${s.process ? '<div class="fabric-detail"' + ce + ' style="color:#d32f2f;">' + s.process + '</div>' : ''}
-      ${s.site ? '<div class="fabric-site"' + ce + '>' + s.site + '</div>' : (editable ? '<div class="fabric-site"' + ce + ' style="color:#ccc;">현장명 입력</div>' : '')}
+      <div class="fabric-top">
+        <div class="fabric-name"${ce}>${s.name}</div>
+        <div class="fabric-detail"${ce}>${s.detail}</div>
+        ${s.process ? '<div class="fabric-detail"' + ce + ' style="color:#d32f2f;">' + s.process + '</div>' : ''}
+        ${s.site ? '<div class="fabric-site"' + ce + '>' + s.site + '</div>' : (editable ? '<div class="fabric-site"' + ce + ' style="color:#ccc;">현장명 입력</div>' : '')}
+      </div>
+      <div class="fabric-bottom">스티커 부착면이 뒷면입니다</div>
     </div>`;
   } else {
     // 주소 줄바꿈
