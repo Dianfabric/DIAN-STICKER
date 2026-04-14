@@ -24,6 +24,8 @@
   .btn-edit:hover { background:#0d47a1; }
   .btn-edit.active { background:#ff8f00; }
   .btn-edit.active:hover { background:#e65100; }
+  .btn-delete { background:#757575; color:#fff; font-size:12px; padding:6px 14px; }
+  .btn-delete:hover { background:#424242; }
   .btn-print-all { background:#1565c0; color:#fff; }
   .btn-print-all:hover { background:#0d47a1; }
 
@@ -298,11 +300,18 @@ function renderStickers() {
         <div style="display:flex;gap:5px;">
           <button class="btn-edit" onclick="toggleEdit(${i}, this)">수정</button>
           <button class="btn-print-one" onclick="printOne(${i})">인쇄</button>
+          <button class="btn-delete" onclick="deleteOne(${i})">삭제</button>
         </div>
       </div>
       ${buildStickerHTML(s, false)}`;
     container.appendChild(wrap);
   });
+}
+
+// 삭제
+function deleteOne(index) {
+  allStickers.splice(index, 1);
+  renderStickers();
 }
 
 // 수정 모드 토글
