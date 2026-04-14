@@ -121,30 +121,48 @@ function parseInput() {
 
     // 원단 스티커
     if (fabricName && qty) {
-      // 현장명 추출:
-      // 1. (괄호 안) → "발신:인휴 (GS자이/검단 84A 거실쿠션)"
-      // 2. "XXX 기재" → 기재 앞 내용이 현장명/메모
-      // 3. / 뒤 텍스트 → "발신: 디자인품 / 에코_갤러리아 센터시티점"
+      // 현장명 추출 우선순위:
+      // 1. "XXX 기재" → 기재 앞 내용이 현장명
+      // 2. (괄호 안) 발신 뒤 → "발신:인휴 (GS자이 84A 거실쿠션)"
+      // 3. / 뒤 텍스트 → "발신: 디자인품 / 에코_갤러리아"
       // 4. "현장 XXX"
       let siteName = '';
-      const parenMatch = bigo.match(/\(([^)]+)\)/);
-      if (parenMatch) {
-        siteName = parenMatch[1];
+
+      // 1. "기재" 패턴 우선 체크
+      const gijaeMatch = bigo.match(/[,]\s*(.+?)\s*기재/);
+      if (gijaeMatch) {
+        siteName = gijaeMatch[1].trim();
       }
+
+      // 2. 발신 뒤 괄호 안 (팩스, 발주 등은 제외)
       if (!siteName) {
-        // "XXX 기재" 패턴 - 기재 앞 내용 추출
-        const gijaeMatch = bigo.match(/[,\/]\s*(.+?)\s*기재/);
-        if (gijaeMatch) {
-          let extracted = gijaeMatch[1].trim();
-          // "발신:" 부분 제거
-          extracted = extracted.replace(/발신[:\s]*\S+\s*[\/]\s*/, '').trim();
-          if (extracted) siteName = extracted;
+        const parenAfterSender = bigo.match(/발신[:\s]*\S+\s*\(([^)]+)\)/);
+        if (parenAfterSender && !parenAfterSender[1].includes('팩스') && !parenAfterSender[1].includes('발주') && !parenAfterSender[1].includes('팀장') && !parenAfterSender[1].includes('대표') && !parenAfterSender[1].includes('사장')) {
+          siteName = parenAfterSender[1];
         }
       }
+
+      // 3. 독립 괄호 (사람 이름이 아닌 경우)
+      if (!siteName) {
+        const allParens = bigo.match(/\(([^)]+)\)/g);
+        if (allParens) {
+          for (const p of allParens) {
+            const inner = p.slice(1, -1);
+            if (!inner.includes('팀장') && !inner.includes('대표') && !inner.includes('사장') && !inner.includes('과장') && !inner.includes('부장') && !inner.includes('실장') && !inner.includes('발주') && !inner.includes('팩스')) {
+              siteName = inner;
+              break;
+            }
+          }
+        }
+      }
+
+      // 4. / 뒤 텍스트
       if (!siteName) {
         const slashMatch = bigo.match(/발신[:\s]*\S+\s*\/\s*(.+?)(?:\s*기재|\s*$)/);
         if (slashMatch) siteName = slashMatch[1].trim();
       }
+
+      // 5. "현장 XXX"
       if (!siteName) {
         const siteMatch = bigo.match(/현장\s*(.+?)(?:\s|$)/);
         if (siteMatch) siteName = siteMatch[1];
