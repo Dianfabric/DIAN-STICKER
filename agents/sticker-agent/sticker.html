@@ -47,8 +47,7 @@
   .sticker.fabric { border:4px solid #000; padding:5mm; }
   .sticker.fabric .fabric-top { flex:1; display:flex; flex-direction:column; justify-content:space-evenly; }
   .sticker.fabric .fabric-name { font-size:32pt; font-weight:900; line-height:1.1; letter-spacing:2px; }
-  .sticker.fabric .fabric-color { font-size:28pt; font-weight:900; line-height:1.1; }
-  .sticker.fabric .fabric-qty { font-size:28pt; font-weight:900; line-height:1.1; }
+  .sticker.fabric .fabric-detail { font-size:28pt; font-weight:900; line-height:1.1; }
   .sticker.fabric .fabric-process { font-size:22pt; font-weight:900; line-height:1.1; color:#d32f2f; }
   .sticker.fabric .fabric-site { font-size:15pt; font-weight:700; color:#555; padding:1mm 3mm; background:#f0f0f0; display:inline-block; }
   .sticker.fabric .fabric-bottom { border-top:3px solid #000; padding-top:2mm; font-size:9pt; color:#555; text-align:center; letter-spacing:1px; }
@@ -247,11 +246,11 @@ function parseInput() {
 function buildStickerHTML(s, editable) {
   const ce = editable ? ' contenteditable="true"' : '';
   if (s.type === 'fabric') {
+    const detail = [s.color, s.qty].filter(Boolean).join(' ');
     return `<div class="sticker fabric">
       <div class="fabric-top">
         <div class="fabric-name"${ce}>${s.name}</div>
-        <div class="fabric-color"${ce}>${s.color || ''}</div>
-        <div class="fabric-qty"${ce}>${s.qty || ''}</div>
+        <div class="fabric-detail"${ce}>${detail}</div>
         ${s.process ? '<div class="fabric-process"' + ce + '>' + s.process + '</div>' : ''}
         ${s.site ? '<div class="fabric-site"' + ce + '>' + s.site + '</div>' : (editable ? '<div class="fabric-site"' + ce + ' style="color:#ccc;">현장명 입력</div>' : '')}
       </div>
@@ -337,7 +336,7 @@ function toggleEdit(index, btn) {
     btn.classList.remove('active');
   } else {
     // 편집 시작
-    sticker.querySelectorAll('.fabric-name, .fabric-color, .fabric-qty, .fabric-process, .fabric-site, .d-row, .d-sender, .d-header span').forEach(el => {
+    sticker.querySelectorAll('.fabric-name, .fabric-detail, .fabric-process, .fabric-site, .d-row, .d-sender, .d-header span').forEach(el => {
       el.setAttribute('contenteditable', 'true');
     });
     btn.textContent = '완료';
