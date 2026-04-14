@@ -123,14 +123,25 @@ function parseInput() {
     if (fabricName && qty) {
       // 현장명 추출:
       // 1. (괄호 안) → "발신:인휴 (GS자이/검단 84A 거실쿠션)"
-      // 2. / 뒤 텍스트 → "발신: 디자인품 / 에코_갤러리아 센터시티점 기재"
-      // 3. "현장 XXX"
+      // 2. "XXX 기재" → 기재 앞 내용이 현장명/메모
+      // 3. / 뒤 텍스트 → "발신: 디자인품 / 에코_갤러리아 센터시티점"
+      // 4. "현장 XXX"
       let siteName = '';
       const parenMatch = bigo.match(/\(([^)]+)\)/);
       if (parenMatch) {
         siteName = parenMatch[1];
-      } else {
-        // / 뒤에서 추출 (발신 다음의 /)
+      }
+      if (!siteName) {
+        // "XXX 기재" 패턴 - 기재 앞 내용 추출
+        const gijaeMatch = bigo.match(/[,\/]\s*(.+?)\s*기재/);
+        if (gijaeMatch) {
+          let extracted = gijaeMatch[1].trim();
+          // "발신:" 부분 제거
+          extracted = extracted.replace(/발신[:\s]*\S+\s*[\/]\s*/, '').trim();
+          if (extracted) siteName = extracted;
+        }
+      }
+      if (!siteName) {
         const slashMatch = bigo.match(/발신[:\s]*\S+\s*\/\s*(.+?)(?:\s*기재|\s*$)/);
         if (slashMatch) siteName = slashMatch[1].trim();
       }
