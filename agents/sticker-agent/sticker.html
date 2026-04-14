@@ -164,10 +164,18 @@ function parseInput() {
         if (siteNameMatch) siteName = siteNameMatch[1].trim();
       }
 
-      // 3. "기재" 패턴 — "다리아/ 샵엠쇼파 기재" → "샵엠쇼파"
+      // 3. "기재" 패턴 — "다리아/ 샵엠쇼파 기재" → "다리아/샵엠쇼파" (기재 앞 전체)
       if (!siteName) {
-        const gijaeMatch = bigo.match(/(?:[,\/]\s*)([^,\/]+?)\s*기재/);
-        if (gijaeMatch) siteName = gijaeMatch[1].trim();
+        // 비고에서 발신 부분과 괄호 부분 제거 후 "기재" 앞 내용 추출
+        const bigoClean = bigo.replace(/발신[:\s]*\S+/g, '').replace(/\([^)]*\)/g, '').trim();
+        const gijaeMatch = bigoClean.match(/(.+?)\s*기재/);
+        if (gijaeMatch) {
+          // 앞쪽 / 뒤부터 (첫 슬래시 이후 전체)
+          let extracted = gijaeMatch[1].trim();
+          // 맨 앞 / 제거
+          extracted = extracted.replace(/^[\/\s,]+/, '').trim();
+          if (extracted) siteName = extracted;
+        }
       }
 
       // 4. 발신 뒤 (괄호 안) — 장소만, 사람/작업용어 제외
