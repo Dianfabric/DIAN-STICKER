@@ -134,8 +134,10 @@ function parseInput() {
 
     const qty = qtyRaw.replace(/'/g, '');
 
-    // 하위업체 판별: 한글이 포함된 경우만 업체명 (숫자만 있으면 단가)
-    const hasSubCompany = subCompany && subCompany !== '' && subCompany !== ' ' && /[가-힣]/.test(subCompany);
+    // 하위업체 판별: 한글 포함 + 커팅/가공 용어 제외 (한컷/대폭/반컷 등은 업체가 아님)
+    const cutTerms = ['한컷','대폭','반컷','2절','3절','4절'];
+    const isCutTerm = cutTerms.some(t => subCompany.includes(t));
+    const hasSubCompany = subCompany && subCompany !== '' && subCompany !== ' ' && /[가-힣]/.test(subCompany) && !isCutTerm;
 
     // 원단 스티커 (하위업체 있으면 우리가 출고 안 하므로 스킵)
     if (fabricName && qty && !hasSubCompany) {
@@ -147,21 +149,25 @@ function parseInput() {
       // 5. "현장 XXX"
       let siteName = '';
 
-      // 1. "현장명:" 패턴
-      const siteNameMatch = bigo.match(/현장명[:\s]+(.+?)(?:\s*\/|\s*$)/);
-      if (siteNameMatch) {
-        siteName = siteNameMatch[1].trim();
+      // 1. [대괄호 안] → "발신:리노위즈 [군포 트리아츠]"
+      const bracketMatch = bigo.match(/\[([^\]]+)\]/);
+      if (bracketMatch) {
+        siteName = bracketMatch[1];
       }
 
-      // 2. "기재" 패턴
+      // 2. "현장명:" 패턴
+      if (!siteName) {
+        const siteNameMatch = bigo.match(/현장명[:\s]+(.+?)(?:\s*\/|\s*$)/);
+        if (siteNameMatch) siteName = siteNameMatch[1].trim();
+      }
+
+      // 3. "기재" 패턴
       if (!siteName) {
         const gijaeMatch = bigo.match(/[,]\s*(.+?)\s*기재/);
-        if (gijaeMatch) {
-          siteName = gijaeMatch[1].trim();
-        }
+        if (gijaeMatch) siteName = gijaeMatch[1].trim();
       }
 
-      // 3. 발신 뒤 괄호 안
+      // 4. 발신 뒤 괄호 안 (사람 제외)
       if (!siteName) {
         const parenAfterSender = bigo.match(/발신[:\s]*\S+\s*\(([^)]+)\)/);
         if (parenAfterSender) {
@@ -172,18 +178,16 @@ function parseInput() {
         }
       }
 
-      // 4. / 뒤 텍스트 (발신 다음)
+      // 5. / 뒤 텍스트 (발신 다음)
       if (!siteName) {
         const slashMatch = bigo.match(/발신[:\s]*\S+\s*\/\s*(.+?)(?:\s*기재|\s*$)/);
         if (slashMatch) siteName = slashMatch[1].trim();
       }
 
-      // 5. "현장 XXX" (현장명: 과 구분)
+      // 6. "현장 XXX" (현장명: 과 구분)
       if (!siteName) {
         const siteMatch = bigo.match(/현장\s+(.+?)(?:\s*\/|\s*$)/);
-        if (siteMatch && !siteMatch[0].includes('현장명')) {
-          siteName = siteMatch[1].trim();
-        }
+        if (siteMatch && !siteMatch[0].includes('현장명')) siteName = siteMatch[1].trim();
       }
 
       allStickers.push({
@@ -223,14 +227,14 @@ function parseInput() {
       }
     }
 
-    // 일신 → 한주섬유: 가공 원단 스티커 (배송스티커 불필요, 원단+가공종류)
+    // 가공건: 일신→한주 또는 대신택배→현대방염 등
+    // 수신자가 한주섬유/현대방염이면 원단 스티커에 가공 내용 추가
     const isIlsin = transport.includes('일신');
-    const isHanju = receiver.includes('한주');
-    if (isIlsin && isHanju && fabricName) {
+    const isProcessReceiver = receiver.includes('한주') || receiver.includes('현대방염');
+    if ((isIlsin || isDaesin) && isProcessReceiver && fabricName) {
       const bigoFirst = bigo.split('/')[0].trim();
       let processType = '';
-      if (bigoFirst && !bigoFirst.includes('화급') && !bigoFirst.includes('입금')) {
-        // "기재" 앞까지만 추출, "기재" 자체는 제외
+      if (bigoFirst && !bigoFirst.includes('화급') && !bigoFirst.includes('입금') && !bigoFirst.includes('발신')) {
         processType = bigoFirst.replace(/\s*기재.*$/, '').trim();
       }
       // 마지막 원단 스티커에 가공 정보 추가
