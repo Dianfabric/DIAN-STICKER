@@ -20,6 +20,10 @@
   .btn-parse:hover { background:#111; }
   .btn-print-one { background:#d32f2f; color:#fff; font-size:12px; padding:6px 14px; }
   .btn-print-one:hover { background:#b71c1c; }
+  .btn-edit { background:#1565c0; color:#fff; font-size:12px; padding:6px 14px; }
+  .btn-edit:hover { background:#0d47a1; }
+  .btn-edit.active { background:#ff8f00; }
+  .btn-edit.active:hover { background:#e65100; }
   .btn-print-all { background:#1565c0; color:#fff; }
   .btn-print-all:hover { background:#0d47a1; }
 
@@ -281,12 +285,36 @@ function renderStickers() {
     const typeLabel = s.type === 'fabric' ? '원단' : '배송';
     wrap.innerHTML = `
       <div class="top-bar">
-        <span class="label">${typeLabel} 스티커 #${i + 1} <span style="color:#aaa;font-size:10px;">클릭하여 편집</span></span>
-        <button class="btn-print-one" onclick="printOne(${i})">인쇄</button>
+        <span class="label">${typeLabel} 스티커 #${i + 1}</span>
+        <div style="display:flex;gap:5px;">
+          <button class="btn-edit" onclick="toggleEdit(${i}, this)">수정</button>
+          <button class="btn-print-one" onclick="printOne(${i})">인쇄</button>
+        </div>
       </div>
-      ${buildStickerHTML(s, true)}`;
+      ${buildStickerHTML(s, false)}`;
     container.appendChild(wrap);
   });
+}
+
+// 수정 모드 토글
+function toggleEdit(index, btn) {
+  const wrap = document.getElementById('sticker-' + index);
+  const sticker = wrap.querySelector('.sticker');
+  const isEditing = btn.classList.contains('active');
+
+  if (isEditing) {
+    // 편집 완료
+    sticker.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    btn.textContent = '수정';
+    btn.classList.remove('active');
+  } else {
+    // 편집 시작
+    sticker.querySelectorAll('.fabric-name, .fabric-detail, .fabric-site, .d-row, .d-sender, .d-header span').forEach(el => {
+      el.setAttribute('contenteditable', 'true');
+    });
+    btn.textContent = '완료';
+    btn.classList.add('active');
+  }
 }
 
 // 개별 스티커 1장 인쇄 (편집된 내용 그대로)
