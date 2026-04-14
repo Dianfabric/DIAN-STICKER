@@ -214,12 +214,13 @@ function parseInput() {
       const bigoFirst = bigo.split('/')[0].trim();
       let processType = '';
       if (bigoFirst && !bigoFirst.includes('화급') && !bigoFirst.includes('입금')) {
-        processType = bigoFirst;
+        // "기재" 앞까지만 추출, "기재" 자체는 제외
+        processType = bigoFirst.replace(/\s*기재.*$/, '').trim();
       }
       // 마지막 원단 스티커에 가공 정보 추가
       const lastIdx = allStickers.length - 1;
       if (lastIdx >= 0 && allStickers[lastIdx].type === 'fabric') {
-        allStickers[lastIdx].process = processType ? processType + '가공' : '';
+        allStickers[lastIdx].process = processType || '';
       }
     }
   }
