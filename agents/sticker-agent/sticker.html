@@ -121,12 +121,20 @@ function parseInput() {
 
     // 원단 스티커
     if (fabricName && qty) {
-      const siteMatch = bigo.match(/현장\s*(.+?)(?:\s|$)/);
+      // 현장명 추출: (괄호 안) 또는 "현장 XXX"
+      let siteName = '';
+      const parenMatch = bigo.match(/\(([^)]+)\)/);
+      if (parenMatch) siteName = parenMatch[1];
+      if (!siteName) {
+        const siteMatch = bigo.match(/현장\s*(.+?)(?:\s|$)/);
+        if (siteMatch) siteName = siteMatch[1];
+      }
+
       allStickers.push({
         type: 'fabric',
         name: fabricName,
         detail: (colorNo ? '#' + colorNo.replace(/^#/, '') + ' ' : '') + qty + 'Y',
-        site: siteMatch ? siteMatch[1] : ''
+        site: siteName
       });
     }
 
