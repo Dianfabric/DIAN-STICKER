@@ -164,18 +164,20 @@ function parseInput() {
         if (siteNameMatch) siteName = siteNameMatch[1].trim();
       }
 
-      // 3. "기재" 패턴
+      // 3. "기재" 패턴 — "다리아/ 샵엠쇼파 기재" → "샵엠쇼파"
       if (!siteName) {
-        const gijaeMatch = bigo.match(/[,]\s*(.+?)\s*기재/);
+        const gijaeMatch = bigo.match(/(?:[,\/]\s*)([^,\/]+?)\s*기재/);
         if (gijaeMatch) siteName = gijaeMatch[1].trim();
       }
 
-      // 4. 발신 뒤 (괄호 안) — 장소만, 사람/팩스/발주 제외
+      // 4. 발신 뒤 (괄호 안) — 장소만, 사람/작업용어 제외
       if (!siteName) {
         const parenAfterSender = bigo.match(/발신[:\s]*\S+\s*\(([^)]+)\)/);
         if (parenAfterSender) {
           const inner = parenAfterSender[1];
-          if (!inner.includes('팩스') && !inner.includes('발주') && !inner.includes('팀장') && !inner.includes('대표') && !inner.includes('사장') && !inner.includes('과장') && !inner.includes('부장')) {
+          const excludeWords = ['팩스','발주','팀장','대표','사장','과장','부장','실장','야드','커팅','발수','방염','코팅','뒷지'];
+          const hasExclude = excludeWords.some(w => inner.includes(w));
+          if (!hasExclude) {
             siteName = inner;
           }
         }
