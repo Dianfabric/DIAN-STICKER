@@ -43,13 +43,15 @@
     overflow:hidden;
   }
 
-  /* 원단 스티커 - 글씨 크게 */
-  .sticker.fabric { justify-content:space-between; }
-  .sticker.fabric .fabric-top { }
-  .sticker.fabric .fabric-name { font-size:36pt; font-weight:900; line-height:1.15; }
-  .sticker.fabric .fabric-detail { font-size:30pt; font-weight:900; line-height:1.15; margin-top:3mm; }
-  .sticker.fabric .fabric-site { font-size:16pt; font-weight:700; margin-top:3mm; color:#555; }
-  .sticker.fabric .fabric-bottom { border-top:2px solid #000; padding-top:2mm; font-size:10pt; color:#555; text-align:center; }
+  /* 원단 스티커 - C안 테두리 균등분배 */
+  .sticker.fabric { border:4px solid #000; padding:5mm; }
+  .sticker.fabric .fabric-top { flex:1; display:flex; flex-direction:column; justify-content:space-evenly; }
+  .sticker.fabric .fabric-name { font-size:32pt; font-weight:900; line-height:1.1; letter-spacing:2px; }
+  .sticker.fabric .fabric-color { font-size:28pt; font-weight:900; line-height:1.1; }
+  .sticker.fabric .fabric-qty { font-size:28pt; font-weight:900; line-height:1.1; }
+  .sticker.fabric .fabric-process { font-size:22pt; font-weight:900; line-height:1.1; color:#d32f2f; }
+  .sticker.fabric .fabric-site { font-size:15pt; font-weight:700; color:#555; padding:1mm 3mm; background:#f0f0f0; display:inline-block; }
+  .sticker.fabric .fabric-bottom { border-top:3px solid #000; padding-top:2mm; font-size:9pt; color:#555; text-align:center; letter-spacing:1px; }
 
   /* 배송 스티커 - 균등 분배 */
   .sticker.delivery { font-weight:900; padding:4mm; display:flex; flex-direction:column; justify-content:space-between; height:100mm; }
@@ -187,7 +189,8 @@ function parseInput() {
       allStickers.push({
         type: 'fabric',
         name: fabricName,
-        detail: (colorNo ? '#' + colorNo.replace(/^#/, '') + ' ' : '') + qty + 'Y',
+        color: colorNo ? '#' + colorNo.replace(/^#/, '') : '',
+        qty: qty ? qty + 'Y' : '',
         site: siteName
       });
     }
@@ -247,8 +250,9 @@ function buildStickerHTML(s, editable) {
     return `<div class="sticker fabric">
       <div class="fabric-top">
         <div class="fabric-name"${ce}>${s.name}</div>
-        <div class="fabric-detail"${ce}>${s.detail}</div>
-        ${s.process ? '<div class="fabric-detail"' + ce + ' style="color:#d32f2f;">' + s.process + '</div>' : ''}
+        <div class="fabric-color"${ce}>${s.color || ''}</div>
+        <div class="fabric-qty"${ce}>${s.qty || ''}</div>
+        ${s.process ? '<div class="fabric-process"' + ce + '>' + s.process + '</div>' : ''}
         ${s.site ? '<div class="fabric-site"' + ce + '>' + s.site + '</div>' : (editable ? '<div class="fabric-site"' + ce + ' style="color:#ccc;">현장명 입력</div>' : '')}
       </div>
       <div class="fabric-bottom">스티커 부착면이 뒷면입니다</div>
@@ -333,7 +337,7 @@ function toggleEdit(index, btn) {
     btn.classList.remove('active');
   } else {
     // 편집 시작
-    sticker.querySelectorAll('.fabric-name, .fabric-detail, .fabric-site, .d-row, .d-sender, .d-header span').forEach(el => {
+    sticker.querySelectorAll('.fabric-name, .fabric-color, .fabric-qty, .fabric-process, .fabric-site, .d-row, .d-sender, .d-header span').forEach(el => {
       el.setAttribute('contenteditable', 'true');
     });
     btn.textContent = '완료';
