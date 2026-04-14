@@ -253,10 +253,16 @@ function parseInput() {
     const isIlsin = transport.includes('일신');
     const isProcessReceiver = receiver.includes('한주') || receiver.includes('현대방염');
     if ((isIlsin || isDaesin) && isProcessReceiver && fabricName) {
-      const bigoFirst = bigo.split('/')[0].trim();
-      let processType = '';
-      if (bigoFirst && !bigoFirst.includes('화급') && !bigoFirst.includes('입금') && !bigoFirst.includes('발신')) {
-        processType = bigoFirst.replace(/\s*기재.*$/, '').trim();
+      // 비고 전체에서 발신/괄호 제거 후 가공 내용 추출
+      let processType = bigo
+        .replace(/발신[:\s]*\S+/g, '')   // 발신 제거
+        .replace(/\([^)]*\)/g, '')       // 괄호 제거
+        .replace(/\s*기재/g, '')          // 기재 제거
+        .replace(/\s+/g, ' ')            // 공백 정리
+        .trim();
+      // / 로 연결된 것 유지 (발수 / 화급건)
+      if (processType) {
+        processType = processType.replace(/^[\/\s]+|[\/\s]+$/g, '').trim();
       }
       // 마지막 원단 스티커에 가공 정보 추가
       const lastIdx = allStickers.length - 1;
