@@ -178,15 +178,24 @@ function parseInput() {
         }
       }
 
-      // 4. 발신 뒤 (괄호 안) — 장소만, 사람/작업용어 제외
+      // 4. 괄호 안에 발신+현장명 → "(발신:리노위즈/코포트리아츠)" → 코포트리아츠
       if (!siteName) {
-        const parenAfterSender = bigo.match(/발신[:\s]*\S+\s*\(([^)]+)\)/);
-        if (parenAfterSender) {
-          const inner = parenAfterSender[1];
-          const excludeWords = ['팩스','발주','팀장','대표','사장','과장','부장','실장','야드','커팅','발수','방염','코팅','뒷지'];
-          const hasExclude = excludeWords.some(w => inner.includes(w));
-          if (!hasExclude) {
-            siteName = inner;
+        const allParens = bigo.match(/\(([^)]+)\)/g);
+        if (allParens) {
+          for (const p of allParens) {
+            const inner = p.slice(1, -1);
+            const excludeWords = ['팩스','발주','팀장','대표','사장','과장','부장','실장','야드','커팅'];
+            const hasExclude = excludeWords.some(w => inner.includes(w));
+            if (hasExclude) continue;
+
+            if (inner.includes('발신')) {
+              // 괄호 안에 발신이 있으면 → 발신 뒤 /이후가 현장명
+              const afterSender = inner.replace(/발신[:\s]*[^\/]+/, '').replace(/^[\/\s]+/, '').trim();
+              if (afterSender) { siteName = afterSender; break; }
+            } else {
+              siteName = inner;
+              break;
+            }
           }
         }
       }
