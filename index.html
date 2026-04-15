@@ -229,12 +229,13 @@ function parseInput() {
       });
     }
 
-    // 배송 스티커: 대신택배 또는 퀵 (앞에 한글 업체명 없을 때)
+    // 배송 스티커: 대신택배 또는 퀵 또는 배달 (앞에 한글 업체명 없을 때)
     const isDaesin = transport.includes('대신');
     const isQuick = transport.includes('퀵');
+    const isDelivery = transport.includes('배달');
 
-    if ((isDaesin || isQuick) && !hasSubCompany && address) {
-      const transportName = isDaesin ? '대신택배' : '퀵';
+    if ((isDaesin || isQuick || isDelivery) && !hasSubCompany && address) {
+      const transportName = isDaesin ? '대신택배' : isQuick ? '퀵' : '배달';
       const pay = payment.includes('현불') ? '현불' : '착불';
       let sender = '';
       const sm = bigo.match(/발신[:\s]*(.+?)(?:\s|$)/);
